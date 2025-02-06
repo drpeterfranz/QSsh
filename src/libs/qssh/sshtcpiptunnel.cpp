@@ -104,7 +104,7 @@ void SshTcpIpTunnelPrivate::handleEof()
 
 qint64 SshTcpIpTunnelPrivate::readData(char *data, qint64 maxlen)
 {
-    const qint64 bytesRead = qMin(qint64(m_data.count()), maxlen);
+    const qint64 bytesRead = qMin(qint64(m_data.size()), maxlen);
     memcpy(data, m_data.constData(), bytesRead);
     m_data.remove(0, bytesRead);
     return bytesRead;

@@ -45,6 +45,7 @@
 #include <botan/dsa.h>
 #include <botan/rsa.h>
 #include <botan/pk_ops.h>
+#include <botan/pubkey.h>
 #include <botan/ecdh.h>
 #include <botan/ecdsa.h>
 
@@ -71,7 +72,7 @@ namespace {
 
     void printData(const char *name, const QByteArray &data)
     {
-        qCDebug(sshLog, "The client thinks the %s has length %d and is: %s", name, int(data.count()),
+        qCDebug(sshLog, "The client thinks the %s has length %d and is: %s", name, int(data.size()),
                 data.toHex().constData());
     }
 
@@ -135,7 +136,7 @@ bool SshKeyExchange::sendDhInitPacket(const SshIncomingPacket &serverKexInit)
         m_sendFacility.sendKeyEcdhInitPacket(convertByteArray(m_ecdhKey->public_value()));
     } else {
         m_dhKey.reset(new DH_PrivateKey(rng, DL_Group(botanKeyExchangeAlgoName(m_kexAlgoName))));
-        m_sendFacility.sendKeyDhInitPacket(m_dhKey->get_y());
+        m_sendFacility.sendKeyDhInitPacket(m_dhKey->get_int_field("y"));
     }
 
     m_serverKexInitPayload = serverKexInit.payLoad();
@@ -148,7 +149,7 @@ void SshKeyExchange::sendNewKeysPacket(const SshIncomingPacket &dhReply,
 
     const SshKeyExchangeReply &reply
         = dhReply.extractKeyExchangeReply(m_kexAlgoName, m_serverHostKeyAlgo);
-    if (m_dhKey && (reply.f <= 0 || reply.f >= m_dhKey->group_p())) {
+    if (m_dhKey && (reply.f <= 0 || reply.f >= m_dhKey->get_int_field("p"))) {
         throw SSH_SERVER_EXCEPTION(SSH_DISCONNECT_KEY_EXCHANGE_FAILED,
             "Server sent invalid f.");
     }
@@ -169,13 +170,13 @@ void SshKeyExchange::sendNewKeysPacket(const SshIncomingPacket &dhReply,
 
     SecureVector<byte> encodedK;
     if (m_dhKey) {
-        concatenatedData += AbstractSshPacket::encodeMpInt(m_dhKey->get_y());
+        concatenatedData += AbstractSshPacket::encodeMpInt(m_dhKey->get_int_field("y"));
         concatenatedData += AbstractSshPacket::encodeMpInt(reply.f);
 
         std::unique_ptr<PK_Ops::Key_Agreement> dhOp = m_dhKey->create_key_agreement_op(rng, "Raw", "base");
         std::vector<byte> encodedF = BigInt::encode(reply.f);
-        encodedK = dhOp->agree(0, encodedF.data(), encodedF.size(), nullptr, 0);
-        printData("y", AbstractSshPacket::encodeMpInt(m_dhKey->get_y()));
+        encodedK = dhOp->agree(0, encodedF, {});
+        printData("y", AbstractSshPacket::encodeMpInt(m_dhKey->get_int_field("y")));
         printData("f", AbstractSshPacket::encodeMpInt(reply.f));
         m_dhKey.reset();
     } else {
@@ -184,8 +185,8 @@ void SshKeyExchange::sendNewKeysPacket(const SshIncomingPacket &dhReply,
                 += AbstractSshPacket::encodeString(convertByteArray(m_ecdhKey->public_value()));
         concatenatedData += AbstractSshPacket::encodeString(reply.q_s);
         std::unique_ptr<PK_Ops::Key_Agreement> ecdhOp = m_ecdhKey->create_key_agreement_op(rng, "Raw", "base");
-
-        encodedK = ecdhOp->agree(0, convertByteArray(reply.q_s), reply.q_s.count(), nullptr, 0);
+        std::vector<byte> q_s(reply.q_s.begin(), reply.q_s.end());
+        encodedK = ecdhOp->agree(0, q_s, {});
         m_ecdhKey.reset();
     }
 
@@ -218,7 +219,7 @@ void SshKeyExchange::sendNewKeysPacket(const SshIncomingPacket &dhReply,
         QSSH_ASSERT_AND_RETURN(m_serverHostKeyAlgo.startsWith(SshCapabilities::PubKeyEcdsaPrefix));
         const EC_Group domain(SshCapabilities::oid(m_serverHostKeyAlgo));
 
-        const PointGFp point = domain.OS2ECP(convertByteArray(reply.q), reply.q.count());
+        const PointGFp point = domain.OS2ECP(convertByteArray(reply.q), reply.q.size());
         ECDSA_PublicKey * const ecdsaKey = new ECDSA_PublicKey(domain, point);
         sigKey.reset(ecdsaKey);
     }

@@ -34,11 +34,12 @@ add_library(QSsh
     opensshkeyfilereader.cpp
     qssh.qrc)
 
-get_property(BOTAN_LIB GLOBAL PROPERTY BOTAN_LIB)
-target_link_libraries( QSsh Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network Qt${QT_VERSION_MAJOR}::Widgets ${BOTAN_LIB})
+target_link_libraries(QSsh Qt6::Core Qt6::Network Qt6::Widgets botan::botan)
 
 # state that anybody linking to us needs to include the current source dir
 target_include_directories(QSsh
+          PRIVATE
+          ${botan_INCLUDE_DIR}
           INTERFACE
 		  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 		  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
