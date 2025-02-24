@@ -31,5 +31,5 @@ install(EXPORT QSsh-targets
 )
 
 
-install(FILES "${CMAKE_SOURCE_DIR}/cmakeFindModules/QSshConfig.cmake"
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/cmakeFindModules/QSshConfig.cmake"
         DESTINATION share/QSsh/cmake)
