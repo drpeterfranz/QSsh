@@ -1,4 +1,4 @@
-add_library(QSsh
+add_library(QSsh SHARED
     sshsendfacility.cpp
     sshremoteprocess.cpp
     sshpacketparser.cpp
@@ -35,9 +35,8 @@ add_library(QSsh
     qssh.qrc)
 
 target_link_libraries(QSsh Qt6::Core Qt6::Network Qt6::Widgets botan::botan)
-if (BUILD_SHARED_LIBS)
-    target_compile_definitions(QSsh PRIVATE QTCSSH_LIBRARY)
-endif()
+# define used in ssh_global.h
+target_compile_definitions(QSsh PRIVATE QTCSSH_LIBRARY=1)
 
 # state that anybody linking to us needs to include the current source dir
 target_include_directories(QSsh
