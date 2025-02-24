@@ -190,7 +190,7 @@ static void getHostKeySpecificReplyData(SshKeyExchangeReply &replyData,
 
 static QByteArray &padToWidth(QByteArray &data, int targetWidth)
 {
-    return data.prepend(QByteArray(targetWidth - data.count(), 0));
+    return data.prepend(QByteArray(targetWidth - data.size(), 0));
 }
 
 SshKeyExchangeReply SshIncomingPacket::extractKeyExchangeReply(const QByteArray &kexAlgo,

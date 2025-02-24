@@ -62,12 +62,12 @@ CONFIG += warn_on
 
 # Find botan2
 CONFIG += link_pkgconfig
-PKGCONFIG += botan-2
+PKGCONFIG += botan-3
 
 CONFIG += depend_includepath
 
 LIBS += -L$$IDE_LIBRARY_PATH
-LIBS += -l$$qtLibraryName(botan-2)
+LIBS += -l$$qtLibraryName(botan-3)
 INCLUDEPATH += $${PWD}/src/libs/
 
 DEFINES += QT_NO_CAST_FROM_ASCII

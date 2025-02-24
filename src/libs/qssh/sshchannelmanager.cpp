@@ -229,14 +229,14 @@ QSsh::SshRemoteProcess::Ptr SshChannelManager::createRemoteProcess(const QByteAr
         m_x11ForwardingRequests << proc;
         auto * const x11InfoRetriever = new SshX11InfoRetriever(displayName, this);
         const auto failureHandler = [this](const QString &errorMessage) {
-            for (SshRemoteProcessPrivate * const proc : qAsConst(m_x11ForwardingRequests))
+            for (SshRemoteProcessPrivate * const proc : std::as_const(m_x11ForwardingRequests))
                 proc->failToStart(errorMessage);
             m_x11ForwardingRequests.clear();
         };
         connect(x11InfoRetriever, &SshX11InfoRetriever::failure, this, failureHandler);
         const auto successHandler = [this](const X11DisplayInfo &displayInfo) {
             m_x11DisplayInfo = displayInfo;
-            for (SshRemoteProcessPrivate * const proc : qAsConst(m_x11ForwardingRequests))
+            for (SshRemoteProcessPrivate* const proc : std::as_const(m_x11ForwardingRequests))
                 proc->startProcess(displayInfo);
             m_x11ForwardingRequests.clear();
         };

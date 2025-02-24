@@ -77,7 +77,7 @@ std::unique_ptr<Private_Key> OpenSshKeyFileReader::privateKey() const
         const BigInt &q = m_parameters.at(1);
         const BigInt &g = m_parameters.at(2);
         const BigInt &x = m_parameters.at(4);
-        return std::make_unique<DSA_PrivateKey>(m_rng, DL_Group(p, q, g), x);
+        return std::make_unique<DSA_PrivateKey>(DL_Group(p, q, g), x);
     } else if (m_keyType.startsWith(SshCapabilities::PubKeyEcdsaPrefix)) {
         QSSH_ASSERT_AND_RETURN_VALUE(m_parameters.size() == 1, nullptr);
         const BigInt &value = m_parameters.first();

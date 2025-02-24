@@ -109,7 +109,7 @@ SshAgent::Packet SshAgent::generateSigPacket(const SshAgent::Request &request)
     p.data += AbstractSshPacket::encodeString(request.key);
     p.data += AbstractSshPacket::encodeString(request.dataToSign);
     p.data += AbstractSshPacket::encodeInt(quint32(0));
-    p.size = p.data.count();
+    p.size = p.data.size();
     return p;
 }
 
@@ -184,13 +184,13 @@ void SshAgent::handleIncomingData()
     m_incomingData += m_agentSocket.readAll();
     while (!hasError() && !m_incomingData.isEmpty()) {
         if (m_incomingPacket.size == 0) {
-            if (m_incomingData.count() < int(sizeof m_incomingPacket.size))
+            if (m_incomingData.size() < int(sizeof m_incomingPacket.size))
                 break;
             m_incomingPacket.size = fromBigEndian<quint32>(m_incomingData);
             m_incomingData.remove(0, sizeof m_incomingPacket.size);
         }
-        const int bytesToTake = qMin<quint32>(m_incomingPacket.size - m_incomingPacket.data.count(),
-                                              m_incomingData.count());
+        const int bytesToTake = qMin<quint32>(m_incomingPacket.size - m_incomingPacket.data.size(),
+            m_incomingData.size());
         m_incomingPacket.data += m_incomingData.left(bytesToTake);
         m_incomingData.remove(0, bytesToTake);
         if (m_incomingPacket.isComplete())

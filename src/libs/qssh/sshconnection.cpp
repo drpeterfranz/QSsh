@@ -347,7 +347,7 @@ void SshConnectionPrivate::handleIncomingData()
         if (!canUseSocket())
             return;
         m_incomingData += m_socket->readAll();
-        qCDebug(sshLog, "state = %d, remote data size = %d", int(m_state), int(m_incomingData.count()));
+        qCDebug(sshLog, "state = %d, remote data size = %d", int(m_state), int(m_incomingData.size()));
         if (m_serverId.isEmpty())
             handleServerId();
         handlePackets();
@@ -367,7 +367,7 @@ void SshConnectionPrivate::handleIncomingData()
 void SshConnectionPrivate::handleServerId()
 {
     qCDebug(sshLog, "%s: incoming data size = %d, incoming data = '%s'",
-        Q_FUNC_INFO, int(m_incomingData.count()), m_incomingData.data());
+        Q_FUNC_INFO, int(m_incomingData.size()), m_incomingData.data());
     const int newLinePos = m_incomingData.indexOf('\n');
     if (newLinePos == -1)
         return; // Not enough data yet.

@@ -30,23 +30,24 @@
 
 #include "sshkeygenerator.h"
 
+#include "ssh_global.h"
 #include "sshbotanconversions_p.h"
 #include "sshcapabilities_p.h"
-#include "ssh_global.h"
-#include "sshpacket_p.h"
 #include "sshlogging_p.h"
+#include "sshpacket_p.h"
 
-#include <botan/rsa.h>
-#include <botan/dsa.h>
 #include <botan/auto_rng.h>
+#include <botan/der_enc.h>
+#include <botan/dl_group.h>
+#include <botan/dsa.h>
+#include <botan/ecdsa.h>
+#include <botan/numthry.h>
+#include <botan/pem.h>
 #include <botan/pipe.h>
 #include <botan/pkcs8.h>
-#include <botan/der_enc.h>
-#include <botan/pem.h>
-#include <botan/x509cert.h>
+#include <botan/rsa.h>
 #include <botan/x509_key.h>
-#include <botan/numthry.h>
-#include <botan/ecdsa.h>
+#include <botan/x509cert.h>
 
 #include <QDateTime>
 #include <QInputDialog>
@@ -58,7 +59,8 @@ namespace QSsh {
 using namespace Botan;
 using namespace Internal;
 
-SshKeyGenerator::SshKeyGenerator() : m_type(Rsa)
+SshKeyGenerator::SshKeyGenerator()
+    : m_type(Rsa)
 {
 }
 
@@ -79,9 +81,9 @@ bool SshKeyGenerator::generateKeys(KeyType type, PrivateKeyFormat format, int ke
             key = KeyPtr(new DSA_PrivateKey(rng, DL_Group(rng, DL_Group::DSA_Kosherizer, keySize)));
             break;
         case Ecdsa: {
-            const QByteArray algo = SshCapabilities::ecdsaPubKeyAlgoForKeyWidth(keySize / 8);
-            key = KeyPtr(new ECDSA_PrivateKey(rng, EC_Group(SshCapabilities::oid(algo))));
-            break;
+                const QByteArray algo = SshCapabilities::ecdsaPubKeyAlgoForKeyWidth(keySize / 8);
+                key = KeyPtr(new ECDSA_PrivateKey(rng, EC_Group(SshCapabilities::oid(algo))));
+                break;
         }
         }
         switch (format) {
@@ -97,24 +99,24 @@ bool SshKeyGenerator::generateKeys(KeyType type, PrivateKeyFormat format, int ke
             generateOpenSslPublicKeyString(key);
         }
         return true;
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
         m_error = tr("Error generating key: %1").arg(QString::fromLocal8Bit(e.what()));
         return false;
     }
 }
 
-void SshKeyGenerator::generatePkcs8KeyStrings(const KeyPtr &key, RandomNumberGenerator &rng)
+void SshKeyGenerator::generatePkcs8KeyStrings(const KeyPtr& key, RandomNumberGenerator& rng)
 {
     generatePkcs8KeyString(key, false, rng);
     generatePkcs8KeyString(key, true, rng);
 }
 
-void SshKeyGenerator::generatePkcs8KeyString(const KeyPtr &key, bool privateKey,
-    RandomNumberGenerator &rng)
+void SshKeyGenerator::generatePkcs8KeyString(const KeyPtr& key, bool privateKey,
+    RandomNumberGenerator& rng)
 {
     Pipe pipe;
     pipe.start_msg();
-    QByteArray *keyData;
+    QByteArray* keyData;
     if (privateKey) {
         QString password;
         if (m_encryptionMode == DoOfferEncryption)
@@ -137,13 +139,13 @@ void SshKeyGenerator::generatePkcs8KeyString(const KeyPtr &key, bool privateKey,
     }
 }
 
-void SshKeyGenerator::generateOpenSslKeyStrings(const KeyPtr &key)
+void SshKeyGenerator::generateOpenSslKeyStrings(const KeyPtr& key)
 {
     generateOpenSslPublicKeyString(key);
     generateOpenSslPrivateKeyString(key);
 }
 
-void SshKeyGenerator::generateOpenSslPublicKeyString(const KeyPtr &key)
+void SshKeyGenerator::generateOpenSslPublicKeyString(const KeyPtr& key)
 {
     QList<BigInt> params;
     QByteArray keyId;
@@ -157,21 +159,22 @@ void SshKeyGenerator::generateOpenSslPublicKeyString(const KeyPtr &key)
     }
     case Dsa: {
         const QSharedPointer<DSA_PrivateKey> dsaKey = key.dynamicCast<DSA_PrivateKey>();
-        params << dsaKey->group_p() << dsaKey->group_q() << dsaKey->group_g() << dsaKey->get_y();
+        params << dsaKey->get_int_field("p") << dsaKey->get_int_field("q") 
+               << dsaKey->get_int_field("g") << dsaKey->get_int_field("y");
         keyId = SshCapabilities::PubKeyDss;
         break;
     }
     case Ecdsa: {
         const auto ecdsaKey = key.dynamicCast<ECDSA_PrivateKey>();
-        q = convertByteArray(ecdsaKey->public_point().encode(PointGFp::UNCOMPRESSED));
+        q = convertByteArray(ecdsaKey->public_point().encode(EC_Point_Format::Uncompressed));
         keyId = SshCapabilities::ecdsaPubKeyAlgoForKeyWidth(
-                    static_cast<int>(ecdsaKey->private_value().bytes()));
+            static_cast<int>(ecdsaKey->private_value().bytes()));
         break;
     }
     }
 
     QByteArray publicKeyBlob = AbstractSshPacket::encodeString(keyId);
-    for (const BigInt &b : params) {
+    for (const BigInt& b : params) {
         publicKeyBlob += AbstractSshPacket::encodeMpInt(b);
     }
     if (!q.isEmpty()) {
@@ -184,16 +187,16 @@ void SshKeyGenerator::generateOpenSslPublicKeyString(const KeyPtr &key)
     m_publicKey = keyId + ' ' + publicKeyBlob + ' ' + id;
 }
 
-void SshKeyGenerator::generateOpenSslPrivateKeyString(const KeyPtr &key)
+void SshKeyGenerator::generateOpenSslPrivateKeyString(const KeyPtr& key)
 {
     QList<BigInt> params;
-    const char *label = "";
+    const char* label = "";
     switch (m_type) {
     case Rsa: {
         const QSharedPointer<RSA_PrivateKey> rsaKey
             = key.dynamicCast<RSA_PrivateKey>();
         params << rsaKey->get_n() << rsaKey->get_e() << rsaKey->get_d() << rsaKey->get_p()
-            << rsaKey->get_q();
+               << rsaKey->get_q();
         const BigInt dmp1 = rsaKey->get_d() % (rsaKey->get_p() - 1);
         const BigInt dmq1 = rsaKey->get_d() % (rsaKey->get_q() - 1);
         const BigInt iqmp = inverse_mod(rsaKey->get_q(), rsaKey->get_p());
@@ -203,8 +206,9 @@ void SshKeyGenerator::generateOpenSslPrivateKeyString(const KeyPtr &key)
     }
     case Dsa: {
         const QSharedPointer<DSA_PrivateKey> dsaKey = key.dynamicCast<DSA_PrivateKey>();
-        params << dsaKey->group_p() << dsaKey->group_q() << dsaKey->group_g() << dsaKey->get_y()
-            << dsaKey->get_x();
+        params << dsaKey->get_int_field("p") << dsaKey->get_int_field("q") 
+               << dsaKey->get_int_field("g") << dsaKey->get_int_field("y")
+               << dsaKey->get_int_field("x");
         label = "DSA PRIVATE KEY";
         break;
     }
@@ -215,12 +219,12 @@ void SshKeyGenerator::generateOpenSslPrivateKeyString(const KeyPtr &key)
     }
 
     DER_Encoder encoder;
-    encoder.start_cons(SEQUENCE).encode(size_t(0));
-    for (const BigInt &b : params) {
+    encoder.start_cons(Botan::ASN1_Type::Sequence, Botan::ASN1_Class::Universal).encode(size_t(0));
+    for (const BigInt& b : params) {
         encoder.encode(b);
     }
     encoder.end_cons();
-    m_privateKey = QByteArray(PEM_Code::encode (encoder.get_contents(), label).c_str());
+    m_privateKey = QByteArray(PEM_Code::encode(encoder.get_contents(), label).c_str());
 }
 
 QString SshKeyGenerator::getPassword() const
@@ -230,7 +234,7 @@ QString SshKeyGenerator::getPassword() const
     d.setTextEchoMode(QLineEdit::Password);
     d.setWindowTitle(tr("Password for Private Key"));
     d.setLabelText(tr("It is recommended that you secure your private key\n"
-        "with a password, which you can enter below."));
+                      "with a password, which you can enter below."));
     d.setOkButtonText(tr("Encrypt Key File"));
     d.setCancelButtonText(tr("Do Not Encrypt Key File"));
     int result = QDialog::Accepted;
