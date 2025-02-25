@@ -52,7 +52,7 @@ target_include_directories(QSsh
 #INSTALL RULES
 install(
   DIRECTORY .
-  DESTINATION include
+  DESTINATION include/qssh
   COMPONENT headers
   FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
 )
