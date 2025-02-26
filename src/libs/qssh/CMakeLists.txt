@@ -1,3 +1,5 @@
+include(GNUInstallDirs)
+
 add_library(QSsh SHARED
     sshsendfacility.cpp
     sshremoteprocess.cpp
@@ -45,15 +47,15 @@ target_include_directories(QSsh
           INTERFACE
 		  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
 		  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
-		  $<INSTALL_INTERFACE:include>
-          $<INSTALL_INTERFACE:include/qssh>
+		  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+          $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/qssh>
           )
 		  
 #INSTALL RULES
 install(
   DIRECTORY .
-  DESTINATION include/qssh
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/qssh
   COMPONENT headers
   FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
 )
-install(TARGETS QSsh DESTINATION lib EXPORT QSsh-targets)
+install(TARGETS QSsh EXPORT QSsh-targets RUNTIME LIBRARY )
