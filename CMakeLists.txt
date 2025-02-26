@@ -23,7 +23,6 @@ add_subdirectory(src)
 add_subdirectory(examples)
 
 # INSTALL RULES
-install(EXPORT QSsh-targets DESTINATION lib)
 install(EXPORT QSsh-targets
   FILE QSshTargets.cmake
   NAMESPACE QSsh::
